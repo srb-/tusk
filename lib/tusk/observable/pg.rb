@@ -64,6 +64,7 @@ module Tusk
       def initialize *args
         super
 
+
         @sub_lock       = Mutex.new
         @observer_state = false
         @subscribers    = {}
@@ -99,10 +100,10 @@ module Tusk
 
       # If this object's #changed? state is true, this method will notify
       # observing objects.
-      def notify_observers
+      def notify_observers payload
         return unless changed?
 
-        unwrap(connection).exec "NOTIFY #{channel}"
+        unwrap(connection).exec "NOTIFY #{channel}, '#{payload}'"
 
         changed false
       end
@@ -147,7 +148,10 @@ module Tusk
       end
 
       def channel
-        "a" + Digest::MD5.hexdigest("#{self.class.name}#{object_id}")
+        #c = "a" + Digest::MD5.hexdigest("#{self.class.name}#{object_id}")
+        c = "a" + Digest::MD5.hexdigest("CHANNEL_RENTALTRACKER_USER_ID1")
+        #p c 
+        c
       end
 
       def start_listener
@@ -157,9 +161,9 @@ module Tusk
           @observing.release
 
           loop do
-            conn.wait_for_notify do |event, pid|
-              subscribers.fetch(event, []).dup.each do |listener, func|
-                listener.send func
+            conn.wait_for_notify do |event, pid, payload|
+              subscribers.fetch(event, []).dup.each do |listener, func|                
+                listener.send(func, payload)
               end
             end
           end
